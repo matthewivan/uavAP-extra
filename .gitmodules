@@ -14,3 +14,5 @@
 	path = extern/uavEE
 	url = https://github.com/theilem/uavEE.git
 	branch = main
+[submodule "uavGS"]
+	url = git@github.com:matthewivan/uavGS.git
