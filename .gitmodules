@@ -8,11 +8,9 @@
 	branch = main
 [submodule "extern/uavGS"]
 	path = extern/uavGS
-	url = https://github.com/theilem/uavGS
+	url = git@github.com:matthewivan/uavGS.git
 	branch = main
 [submodule "extern/uavEE"]
 	path = extern/uavEE
 	url = https://github.com/theilem/uavEE.git
 	branch = main
-[submodule "uavGS"]
-	url = git@github.com:matthewivan/uavGS.git
