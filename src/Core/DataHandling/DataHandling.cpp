@@ -56,9 +56,9 @@ DataHandling::run(RunStage stage)
 		case RunStage::NORMAL:
 		{
 			auto scheduler = get<IScheduler>();
-			scheduler->schedule([this]
+			statusEvent_ = scheduler->schedule([this]
 								{ sendStatus(); }, Milliseconds(0), Milliseconds(params.period()));
-
+			currentPeriod_ = params.period();
 			if (params.useIDC())
 			{
 				auto idc = get<IDC>();
@@ -101,7 +101,21 @@ DataHandling::onPacket(const Packet& packet)
 		return;
 	}
 	auto p = packet;
-	Content content = dp->extractHeader<Content>(p);
+	auto content = dp->extractHeader<Content>(p);
+
+	if (content == Content::MEMBER_DATA)
+	{
+		auto memberId = dp->extractHeader<std::string>(p);
+		auto it = memberSubscribers_.find(memberId);
+		if (it == memberSubscribers_.end())
+		{
+			CPSLOG_WARN << "Packet with Member Data content for " << memberId
+						<< " received, but no subscribers";
+			return;
+		}
+		it->second(p);
+		return;
+	}
 
 	auto it = subscribers_.find(content);
 	if (it == subscribers_.end())
@@ -135,8 +149,21 @@ DataHandling::publish(const Packet& packet)
 	}
 	if (params.useIPC())
 	{
-		publisher_.publish(packet);
+		bool result = publisher_.publish(packet);
+		if (params.useAdaptivePeriod())
+			adaptPeriod(result);
 	}
+}
+
+void
+DataHandling::adaptPeriod(bool sendSuccess)
+{
+	if (sendSuccess)
+		currentPeriod_ = std::floor(static_cast<FloatingType>(currentPeriod_) * params.decrement());
+	else
+		currentPeriod_ = std::ceil(static_cast<FloatingType>(currentPeriod_) * params.increment());
+	currentPeriod_ = std::clamp(currentPeriod_, params.minPeriod(), params.maxPeriod());
+	statusEvent_.changePeriod(Milliseconds(currentPeriod_));
 }
 
 void
